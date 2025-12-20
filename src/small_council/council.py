@@ -11,7 +11,8 @@ async def stage1_collect_responses(
     user_query: str,
     council_models: List[str],
     api_key: str,
-    api_url: str
+    api_url: str,
+    timeout: float = 120.0
 ) -> List[Dict[str, Any]]:
     """
     Stage 1: Collect individual responses from all council models.
@@ -21,12 +22,13 @@ async def stage1_collect_responses(
         council_models: List of model identifiers
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
+        timeout: Request timeout in seconds
 
     Returns:
         List of dicts with 'model' and 'response' keys
     """
     messages = [{"role": "user", "content": user_query}]
-    responses = await query_models_parallel(council_models, messages, api_key, api_url)
+    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout)
 
     stage1_results = []
     for model, response in responses.items():
@@ -44,7 +46,8 @@ async def stage2_collect_rankings(
     stage1_results: List[Dict[str, Any]],
     council_models: List[str],
     api_key: str,
-    api_url: str
+    api_url: str,
+    timeout: float = 120.0
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """
     Stage 2: Each model ranks the anonymized responses.
@@ -55,6 +58,7 @@ async def stage2_collect_rankings(
         council_models: List of model identifiers
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
+        timeout: Request timeout in seconds
 
     Returns:
         Tuple of (rankings list, label_to_model mapping)
@@ -103,7 +107,7 @@ FINAL RANKING:
 Now provide your evaluation and ranking:"""
 
     messages = [{"role": "user", "content": ranking_prompt}]
-    responses = await query_models_parallel(council_models, messages, api_key, api_url)
+    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout)
 
     stage2_results = []
     for model, response in responses.items():
@@ -125,7 +129,8 @@ async def stage3_synthesize_final(
     stage2_results: List[Dict[str, Any]],
     chairman_model: str,
     api_key: str,
-    api_url: str
+    api_url: str,
+    timeout: float = 120.0
 ) -> Dict[str, Any]:
     """
     Stage 3: Chairman synthesizes final response.
@@ -137,25 +142,29 @@ async def stage3_synthesize_final(
         chairman_model: Model identifier for chairman
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
+        timeout: Request timeout in seconds
 
     Returns:
         Dict with 'model' and 'response' keys
     """
+    # Anonymize Stage 1 responses (same labels as used in Stage 2)
+    labels = [chr(65 + i) for i in range(len(stage1_results))]
     stage1_text = "\n\n".join([
-        f"Model: {result['model']}\nResponse: {result['response']}"
-        for result in stage1_results
+        f"Response {label}:\n{result['response']}"
+        for label, result in zip(labels, stage1_results)
     ])
 
+    # Anonymize Stage 2 evaluators
     stage2_text = "\n\n".join([
-        f"Model: {result['model']}\nRanking: {result['ranking']}"
-        for result in stage2_results
+        f"Evaluator {i+1}:\n{result['ranking']}"
+        for i, result in enumerate(stage2_results)
     ])
 
-    chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
+    chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses anonymously.
 
 Original Question: {user_query}
 
-STAGE 1 - Individual Responses:
+STAGE 1 - Individual Responses (anonymized):
 {stage1_text}
 
 STAGE 2 - Peer Rankings:
@@ -169,7 +178,7 @@ Your task as Chairman is to synthesize all of this information into a single, co
 Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
     messages = [{"role": "user", "content": chairman_prompt}]
-    response = await query_model(chairman_model, messages, api_key, api_url)
+    response = await query_model(chairman_model, messages, api_key, api_url, timeout=timeout)
 
     if response is None:
         return {
@@ -191,19 +200,24 @@ def parse_ranking_from_text(ranking_text: str) -> List[str]:
         ranking_text: The full text response from the model
 
     Returns:
-        List of response labels in ranked order
+        List of response labels in ranked order, or empty list if invalid
     """
-    if "FINAL RANKING:" in ranking_text:
-        parts = ranking_text.split("FINAL RANKING:")
-        if len(parts) >= 2:
-            ranking_section = parts[1]
-            numbered_matches = re.findall(r'\d+\.\s*Response [A-Z]', ranking_section)
-            if numbered_matches:
-                return [re.search(r'Response [A-Z]', m).group() for m in numbered_matches]
-            matches = re.findall(r'Response [A-Z]', ranking_section)
-            return matches
+    # Require FINAL RANKING section - no fallback to avoid picking up
+    # mentions from the critique section
+    if "FINAL RANKING:" not in ranking_text:
+        return []
 
-    matches = re.findall(r'Response [A-Z]', ranking_text)
+    parts = ranking_text.split("FINAL RANKING:")
+    if len(parts) < 2:
+        return []
+
+    ranking_section = parts[1]
+    numbered_matches = re.findall(r'\d+\.\s*Response [A-Z]', ranking_section)
+    if numbered_matches:
+        return [re.search(r'Response [A-Z]', m).group() for m in numbered_matches]
+
+    # Fallback: non-numbered responses in ranking section only
+    matches = re.findall(r'Response [A-Z]', ranking_section)
     return matches
 
 
@@ -252,6 +266,7 @@ async def run_full_council(
     chairman_model: str,
     api_key: str,
     api_url: str = "https://openrouter.ai/api/v1/chat/completions",
+    timeout: float = 120.0,
     on_stage_complete: Optional[Callable[[str, Any], Awaitable[None]]] = None
 ) -> Tuple[List, List, Dict, Dict]:
     """
@@ -263,6 +278,7 @@ async def run_full_council(
         chairman_model: Chairman model identifier
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
+        timeout: Request timeout in seconds
         on_stage_complete: Optional async callback called after each stage
 
     Returns:
@@ -270,7 +286,7 @@ async def run_full_council(
     """
     # Stage 1
     stage1_results = await stage1_collect_responses(
-        user_query, council_models, api_key, api_url
+        user_query, council_models, api_key, api_url, timeout=timeout
     )
 
     if on_stage_complete:
@@ -282,9 +298,10 @@ async def run_full_council(
             "response": "All models failed to respond. Please try again."
         }, {}
 
-    # Stage 2
+    # Stage 2 - only use models that responded in Stage 1
+    responding_models = [result['model'] for result in stage1_results]
     stage2_results, label_to_model = await stage2_collect_rankings(
-        user_query, stage1_results, council_models, api_key, api_url
+        user_query, stage1_results, responding_models, api_key, api_url, timeout=timeout
     )
     aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
 
@@ -298,7 +315,7 @@ async def run_full_council(
     # Stage 3
     stage3_result = await stage3_synthesize_final(
         user_query, stage1_results, stage2_results,
-        chairman_model, api_key, api_url
+        chairman_model, api_key, api_url, timeout=timeout
     )
 
     if on_stage_complete:

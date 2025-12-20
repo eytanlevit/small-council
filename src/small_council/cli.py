@@ -43,8 +43,9 @@ def get_query(query_arg: Optional[str]) -> str:
     raise typer.Exit(1)
 
 
-@app.command()
+@app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     query: Optional[str] = typer.Argument(
         None,
         help="The question to ask the council. Can also be piped via stdin.",
@@ -129,6 +130,10 @@ def main(
         small-council -f code.py -f readme.md "Review this code"
         small-council -i "src/**/*.py" "Analyze this codebase"
     """
+    # If invoked with a subcommand, let typer handle it
+    if ctx.invoked_subcommand is not None:
+        return
+
     # Get the query
     raw_query = get_query(query)
 
@@ -166,15 +171,18 @@ def main(
     # Create output handler for rich mode (uses stderr for progress)
     output = RichOutput(stderr_console, quiet=quiet or not use_rich)
 
+    # Store total model count for callback
+    total_models = len(config.council_models)
+
     # Run the council
     async def run():
         if use_rich:
-            output.show_stage1_start(len(config.council_models))
+            output.show_stage1_start(total_models)
 
         async def on_stage_complete(stage: str, data):
             if use_rich:
                 if stage == "stage1":
-                    output.show_stage1_complete(data)
+                    output.show_stage1_complete(data, total_models)
                     output.show_stage2_start()
                 elif stage == "stage2":
                     output.show_stage2_complete(
@@ -191,6 +199,7 @@ def main(
             chairman_model=config.chairman_model,
             api_key=config.api_key,
             api_url=config.api_url,
+            timeout=config.timeout,
             on_stage_complete=on_stage_complete if use_rich else None,
         )
 

@@ -75,8 +75,11 @@ def load_config(
 
     # Load from config file if exists
     if config_path.exists():
-        with open(config_path) as f:
-            config_data = yaml.safe_load(f) or {}
+        try:
+            with open(config_path) as f:
+                config_data = yaml.safe_load(f) or {}
+        except yaml.YAMLError as e:
+            raise ConfigError(f"Invalid YAML in {config_path}: {e}")
 
         if "api_key" in config_data:
             api_key = config_data["api_key"]

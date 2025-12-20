@@ -25,13 +25,13 @@ class RichOutput:
             f"[bold blue]Stage 1:[/] Collecting Responses from {model_count} models...",
         )
 
-    def show_stage1_complete(self, results: List[Dict[str, Any]]):
+    def show_stage1_complete(self, results: List[Dict[str, Any]], total_models: int):
         """Show Stage 1 results."""
         if self.quiet:
             return
 
         self.console.print(
-            f"[bold green]Stage 1 Complete[/] [{len(results)}/{len(results)} responded]\n"
+            f"[bold green]Stage 1 Complete[/] [{len(results)}/{total_models} responded]\n"
         )
 
         for result in results:
@@ -68,7 +68,7 @@ class RichOutput:
         table = Table(title="Aggregate Rankings", show_header=True)
         table.add_column("Rank", style="cyan", justify="right")
         table.add_column("Model", style="white")
-        table.add_column("Avg Score", style="green", justify="right")
+        table.add_column("Avg Rank", style="green", justify="right")
 
         for i, ranking in enumerate(aggregate_rankings, 1):
             table.add_row(

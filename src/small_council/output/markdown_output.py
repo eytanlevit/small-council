@@ -38,8 +38,8 @@ def format_markdown(
     # Stage 2 - Aggregate Rankings
     lines.append("## Stage 2: Peer Evaluation\n")
     lines.append("### Aggregate Rankings\n")
-    lines.append("| Rank | Model | Average Score |")
-    lines.append("|------|-------|---------------|")
+    lines.append("| Rank | Model | Average Rank |")
+    lines.append("|------|-------|--------------|")
 
     aggregate = metadata.get("aggregate_rankings", [])
     for i, ranking in enumerate(aggregate, 1):

@@ -1,6 +1,7 @@
 """OpenRouter API client for making LLM requests."""
 
 import asyncio
+import sys
 import httpx
 from typing import List, Dict, Any, Optional
 
@@ -10,7 +11,8 @@ async def query_model(
     messages: List[Dict[str, str]],
     api_key: str,
     api_url: str = "https://openrouter.ai/api/v1/chat/completions",
-    timeout: float = 120.0
+    timeout: float = 120.0,
+    client: Optional[httpx.AsyncClient] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Query a single model via OpenRouter API.
@@ -21,6 +23,7 @@ async def query_model(
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
         timeout: Request timeout in seconds
+        client: Optional shared AsyncClient (creates one if not provided)
 
     Returns:
         Response dict with 'content' and optional 'reasoning_details', or None if failed
@@ -35,25 +38,30 @@ async def query_model(
         "messages": messages,
     }
 
+    async def do_request(c: httpx.AsyncClient) -> Dict[str, Any]:
+        response = await c.post(api_url, headers=headers, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        message = data['choices'][0]['message']
+        return {
+            'content': message.get('content'),
+            'reasoning_details': message.get('reasoning_details')
+        }
+
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                api_url,
-                headers=headers,
-                json=payload
-            )
-            response.raise_for_status()
-
-            data = response.json()
-            message = data['choices'][0]['message']
-
-            return {
-                'content': message.get('content'),
-                'reasoning_details': message.get('reasoning_details')
-            }
-
+        if client:
+            return await do_request(client)
+        else:
+            async with httpx.AsyncClient(timeout=timeout) as c:
+                return await do_request(c)
+    except httpx.HTTPStatusError as e:
+        print(f"[{model}] HTTP {e.response.status_code}: {e.response.text[:200]}", file=sys.stderr)
+        return None
+    except httpx.TimeoutException:
+        print(f"[{model}] Request timed out", file=sys.stderr)
+        return None
     except Exception as e:
-        # Return None on failure for graceful degradation
+        print(f"[{model}] Error: {type(e).__name__}: {e}", file=sys.stderr)
         return None
 
 
@@ -61,20 +69,23 @@ async def query_models_parallel(
     models: List[str],
     messages: List[Dict[str, str]],
     api_key: str,
-    api_url: str = "https://openrouter.ai/api/v1/chat/completions"
+    api_url: str = "https://openrouter.ai/api/v1/chat/completions",
+    timeout: float = 120.0
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """
-    Query multiple models in parallel.
+    Query multiple models in parallel using a shared connection pool.
 
     Args:
         models: List of OpenRouter model identifiers
         messages: List of message dicts to send to each model
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
+        timeout: Request timeout in seconds
 
     Returns:
         Dict mapping model identifier to response dict (or None if failed)
     """
-    tasks = [query_model(model, messages, api_key, api_url) for model in models]
-    responses = await asyncio.gather(*tasks)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        tasks = [query_model(model, messages, api_key, api_url, timeout=timeout, client=client) for model in models]
+        responses = await asyncio.gather(*tasks)
     return {model: response for model, response in zip(models, responses)}
