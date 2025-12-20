@@ -3,7 +3,7 @@
 import asyncio
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import typer
 from rich.console import Console
@@ -11,6 +11,7 @@ from rich.console import Console
 from . import __version__
 from .config import load_config, ConfigError
 from .council import run_full_council
+from .files import build_prompt_with_files
 from .output import RichOutput, format_json, format_markdown
 
 app = typer.Typer(
@@ -88,6 +89,18 @@ def main(
         "--chairman",
         help="Chairman model (overrides config)",
     ),
+    files: Optional[List[Path]] = typer.Option(
+        None,
+        "--file",
+        "-f",
+        help="Include file contents in prompt (can be repeated)",
+    ),
+    include: Optional[List[str]] = typer.Option(
+        None,
+        "--include",
+        "-i",
+        help="Include files matching glob pattern (can be repeated)",
+    ),
     version: bool = typer.Option(
         False,
         "--version",
@@ -113,9 +126,18 @@ def main(
         echo "Explain quantum computing" | small-council
         small-council --json "Compare Python and Rust" > result.json
         small-council -a "Quick question" | pbcopy  # just the answer
+        small-council -f code.py -f readme.md "Review this code"
+        small-council -i "src/**/*.py" "Analyze this codebase"
     """
     # Get the query
-    user_query = get_query(query)
+    raw_query = get_query(query)
+
+    # Build prompt with files if specified
+    user_query = build_prompt_with_files(
+        raw_query,
+        file_paths=files,
+        include_patterns=include,
+    )
 
     # Parse model overrides
     models_list = None
