@@ -11,12 +11,13 @@ from dotenv import load_dotenv
 
 DEFAULT_COUNCIL_MODELS = [
     "openai/gpt-5.2",
+    "openai/gpt-5.2-pro",
     "google/gemini-3-pro-preview",
     "anthropic/claude-opus-4.5",
     "x-ai/grok-4",
 ]
 
-DEFAULT_CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
+DEFAULT_CHAIRMAN_MODEL = "openai/gpt-5.2-pro"
 DEFAULT_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_TIMEOUT = 120.0
 
