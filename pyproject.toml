@@ -1,0 +1,29 @@
+[project]
+name = "small-council"
+version = "0.1.0"
+description = "CLI tool for multi-LLM deliberation via OpenRouter"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Eytan Levit"}
+]
+keywords = ["llm", "ai", "council", "cli", "openrouter"]
+
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "httpx>=0.27.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+small-council = "small_council.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/small_council"]
