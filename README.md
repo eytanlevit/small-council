@@ -39,8 +39,10 @@ council_models:
   - google/gemini-3-pro-preview
   - anthropic/claude-opus-4.5
   - x-ai/grok-4
-chairman_model: google/gemini-3-pro-preview
+chairman_model: openai/gpt-5.2-pro
 ```
+
+Note: The chairman is separate from council members - it only synthesizes the final answer and doesn't participate in ranking.
 
 ## Usage
 
@@ -70,8 +72,38 @@ small-council -q "Your question"
 |------|-------|-------------|
 | `--json` | `-j` | Output as JSON |
 | `--markdown` | `-m` | Output as Markdown |
+| `--answer-only` | `-a` | Output only the final synthesized answer |
 | `--quiet` | `-q` | Suppress progress, show only final result |
 | `--config` | `-c` | Path to config file |
 | `--models` | | Override council models (comma-separated) |
 | `--chairman` | | Override chairman model |
 | `--version` | `-V` | Show version |
+
+## Agent-Friendly Features
+
+Small Council is designed to work well with coding agents and scripts:
+
+**Auto-detect piped output**: When stdout is piped (not a TTY), automatically outputs JSON:
+```bash
+# These are equivalent when piped
+small-council "query" | jq '.stage3.response'
+small-council --json "query" | jq '.stage3.response'
+```
+
+**Progress on stderr**: Progress indicators and errors go to stderr, keeping stdout clean:
+```bash
+# Progress visible, JSON to file
+small-council "query" > result.json
+
+# Hide progress entirely
+small-council "query" 2>/dev/null > result.json
+```
+
+**Answer-only mode**: Get just the final synthesized answer:
+```bash
+# Perfect for agents that just need the answer
+ANSWER=$(small-council -a "What's the capital of France?")
+
+# Pipe to clipboard
+small-council -a "Summarize this code" | pbcopy
+```
