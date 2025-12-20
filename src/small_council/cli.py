@@ -19,12 +19,14 @@ app = typer.Typer(
     add_completion=False,
 )
 
-console = Console()
+# Separate consoles: stderr for progress, stdout for results
+stderr_console = Console(stderr=True)
+stdout_console = Console()
 
 
 def version_callback(value: bool):
     if value:
-        console.print(f"small-council {__version__}")
+        stderr_console.print(f"small-council {__version__}")
         raise typer.Exit()
 
 
@@ -36,7 +38,7 @@ def get_query(query_arg: Optional[str]) -> str:
     if not sys.stdin.isatty():
         return sys.stdin.read().strip()
 
-    console.print("[red]Error:[/] No query provided. Pass as argument or pipe via stdin.")
+    stderr_console.print("[red]Error:[/] No query provided. Pass as argument or pipe via stdin.")
     raise typer.Exit(1)
 
 
@@ -63,6 +65,12 @@ def main(
         "--quiet",
         "-q",
         help="Suppress progress output, show only final result",
+    ),
+    answer_only: bool = typer.Option(
+        False,
+        "--answer-only",
+        "-a",
+        help="Output only the final synthesized answer (agent-friendly)",
     ),
     config_path: Optional[Path] = typer.Option(
         None,
@@ -97,10 +105,14 @@ def main(
     2. Anonymously rank each other's responses
     3. Have a chairman synthesize a final answer
 
+    Agent-friendly: When stdout is piped, automatically outputs JSON.
+    Progress/errors go to stderr, keeping stdout clean for parsing.
+
     Examples:
         small-council "What is the meaning of life?"
         echo "Explain quantum computing" | small-council
         small-council --json "Compare Python and Rust" > result.json
+        small-council -a "Quick question" | pbcopy  # just the answer
     """
     # Get the query
     user_query = get_query(query)
@@ -118,16 +130,19 @@ def main(
             chairman_override=chairman,
         )
     except ConfigError as e:
-        console.print(f"[red]Configuration error:[/] {e}")
+        stderr_console.print(f"[red]Configuration error:[/] {e}")
         raise typer.Exit(1)
 
     # Determine output mode
-    use_json = json_output
+    # Auto-detect: if stdout is piped and no format specified, use JSON
+    stdout_is_tty = sys.stdout.isatty()
+    use_json = json_output or (not stdout_is_tty and not markdown_output and not answer_only)
     use_markdown = markdown_output
-    use_rich = not (use_json or use_markdown)
+    use_answer_only = answer_only
+    use_rich = not (use_json or use_markdown or use_answer_only) and stdout_is_tty
 
-    # Create output handler for rich mode
-    output = RichOutput(console, quiet=quiet or not use_rich)
+    # Create output handler for rich mode (uses stderr for progress)
+    output = RichOutput(stderr_console, quiet=quiet or not use_rich)
 
     # Run the council
     async def run():
@@ -162,11 +177,14 @@ def main(
     try:
         stage1, stage2, stage3, metadata = asyncio.run(run())
     except KeyboardInterrupt:
-        console.print("\n[yellow]Interrupted[/]")
+        stderr_console.print("\n[yellow]Interrupted[/]")
         raise typer.Exit(130)
 
     # Format output for non-rich modes
-    if use_json:
+    if use_answer_only:
+        # Just the final answer, clean for agents
+        print(stage3.get("response", ""))
+    elif use_json:
         print(format_json(user_query, stage1, stage2, stage3, metadata))
     elif use_markdown:
         print(format_markdown(user_query, stage1, stage2, stage3, metadata))
