@@ -1,5 +1,7 @@
 # Small Council
 
+*Throw humanity's smartest AIs at any problem you have.*
+
 CLI tool for multi-LLM deliberation via OpenRouter.
 
 Get consensus answers from multiple frontier AI models (GPT-5.2, GPT-5.2-pro, Gemini 3 Pro, Claude Sonnet 4, Grok 4) with anonymous peer ranking and Claude Opus 4.5 chairman synthesis.
