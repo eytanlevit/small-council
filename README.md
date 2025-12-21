@@ -2,7 +2,7 @@
 
 CLI tool for multi-LLM deliberation via OpenRouter.
 
-Get consensus answers from multiple frontier AI models (GPT-5.2, Gemini 3 Pro, Claude Opus 4.5, Grok 4) with anonymous peer ranking and chairman synthesis.
+Get consensus answers from multiple frontier AI models (GPT-5.2, GPT-5.2-pro, Gemini 3 Pro, Claude Sonnet 4, Grok 4) with anonymous peer ranking and Claude Opus 4.5 chairman synthesis.
 
 ## How It Works
 
@@ -13,38 +13,39 @@ Small Council runs a 3-stage deliberation:
 3. **Stage 3**: A chairman LLM synthesizes the final answer
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Your Question                           │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Stage 1: Independent Responses                             │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │
-│  │ GPT-5.2 │ │ Gemini  │ │ Claude  │ │ Grok 4  │           │
-│  │         │ │ 3 Pro   │ │ Opus 4.5│ │         │           │
-│  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘           │
-└───────┼──────────┼──────────┼──────────┼───────────────────┘
-        │          │          │          │
-        ▼          ▼          ▼          ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Stage 2: Anonymous Peer Ranking                            │
-│  Each model ranks all responses (A, B, C, D) without        │
-│  knowing which model wrote which response                   │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Stage 3: Chairman Synthesis                                │
-│  ┌─────────────┐                                            │
-│  │ GPT-5.2-pro │ → Synthesizes final consensus answer      │
-│  └─────────────┘                                            │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Final Answer                              │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Your Question                               │
+└─────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Stage 1: Independent Responses                                     │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+│  │ GPT-5.2 │ │GPT-5.2  │ │ Gemini  │ │ Claude  │ │ Grok 4  │       │
+│  │         │ │  pro    │ │ 3 Pro   │ │Sonnet 4 │ │         │       │
+│  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘       │
+└───────┼──────────┼──────────┼──────────┼──────────┼────────────────┘
+        │          │          │          │          │
+        ▼          ▼          ▼          ▼          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Stage 2: Anonymous Peer Ranking                                    │
+│  Each model ranks all responses (A, B, C, D, E) without             │
+│  knowing which model wrote which response                           │
+└─────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  Stage 3: Chairman Synthesis                                        │
+│  ┌───────────────┐                                                  │
+│  │ Claude Opus   │ → Synthesizes final answer + adds own insights  │
+│  │     4.5       │                                                  │
+│  └───────────────┘                                                  │
+└─────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Final Answer                                │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
@@ -90,14 +91,15 @@ Create `~/.small-council.yaml` for persistent configuration:
 api_key: sk-or-v1-your-key-here
 council_models:
   - openai/gpt-5.2
+  - openai/gpt-5.2-pro
   - google/gemini-3-pro-preview
-  - anthropic/claude-opus-4.5
+  - anthropic/claude-sonnet-4
   - x-ai/grok-4
-chairman_model: openai/gpt-5.2-pro
+chairman_model: anthropic/claude-opus-4.5
 timeout: 120  # seconds per API call
 ```
 
-Note: The chairman is separate from council members - it only synthesizes the final answer and doesn't participate in ranking.
+Note: The chairman is separate from council members. It synthesizes the final answer, can add its own insights, and correct errors - but doesn't participate in the initial response or ranking phases.
 
 ## Usage
 
