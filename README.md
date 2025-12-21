@@ -1,18 +1,20 @@
 # Small Council
 
-*Throw humanity's smartest AIs at any problem you have.*
+*Throw humanity's smartest AIs at any problem your coding agent has.*
 
-Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-council). CLI tool for multi-LLM deliberation via OpenRouter.
+Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-council).
 
-Get consensus answers from multiple frontier AI models (GPT-5.2, GPT-5.2-pro, Gemini 3 Pro, Claude Sonnet 4, Grok 4) with anonymous peer ranking and Claude Opus 4.5 chairman synthesis.
+**Small Council** is a Claude Code skill + CLI tool that lets coding agents consult multiple frontier AI models for feedback, reviews, and second opinions. When your agent is stuck, unsure, or needs validation — it can ask the council.
+
+## Use Cases
+
+- **Code Review**: Get 5 expert perspectives on your implementation
+- **Architecture Decisions**: "Should we use microservices or keep the monolith?"
+- **Breaking Out of Loops**: When your agent keeps failing, get fresh perspectives
+- **Plan Validation**: Review implementation plans before writing code
+- **Hard Problems**: Tackle complex bugs or design challenges with collective intelligence
 
 ## How It Works
-
-Small Council runs a 3-stage deliberation:
-
-1. **Stage 1**: Multiple LLMs independently answer your question
-2. **Stage 2**: Each LLM anonymously ranks all responses
-3. **Stage 3**: A chairman LLM synthesizes the final answer
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -50,179 +52,40 @@ Small Council runs a 3-stage deliberation:
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-## Installation
-
-### From PyPI (coming soon)
-
-```bash
-uv tool install small-council
-```
-
-### From Source
-
-```bash
-git clone https://github.com/anthropics/small-council.git
-cd small-council
-uv tool install .
-```
-
-### For Development
-
-```bash
-git clone https://github.com/anthropics/small-council.git
-cd small-council
-uv sync
-uv run small-council "Your question"
-```
-
-## Configuration
-
-### API Key
-
-Get an API key from [OpenRouter](https://openrouter.ai/) and set it:
-
-```bash
-export OPENROUTER_API_KEY=sk-or-v1-your-key-here
-```
-
-### Config File (Optional)
-
-Create `~/.small-council.yaml` for persistent configuration:
-
-```yaml
-api_key: sk-or-v1-your-key-here
-council_models:
-  - openai/gpt-5.2
-  - openai/gpt-5.2-pro
-  - google/gemini-3-pro-preview
-  - anthropic/claude-sonnet-4
-  - x-ai/grok-4
-chairman_model: anthropic/claude-opus-4.5
-timeout: 120  # seconds per API call
-```
-
-Note: The chairman is separate from council members - it only synthesizes the final answer and doesn't participate in ranking.
-
-## Usage
-
-### Basic
-
-```bash
-small-council "What is the best programming language for beginners?"
-```
-
-### With Files (Code Review)
-
-```bash
-# Include specific files
-small-council -f src/main.py -f src/utils.py "Review this code for bugs"
-
-# Include files by glob pattern
-small-council -i "src/**/*.py" "What's the architecture of this codebase?"
-```
-
-### Output Formats
-
-```bash
-# Rich terminal output (default)
-small-council "Your question"
-
-# JSON output
-small-council --json "Your question" > result.json
-
-# Markdown output
-small-council --markdown "Your question" > result.md
-
-# Answer only (no stages, just final answer)
-small-council -a "Your question"
-```
-
-### Override Models
-
-```bash
-small-council --models "gpt-5.2,claude-opus-4.5" --chairman "gemini-3-pro" "Your question"
-```
-
-## Options
-
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--json` | `-j` | Output as JSON |
-| `--markdown` | `-m` | Output as Markdown |
-| `--answer-only` | `-a` | Output only the final synthesized answer |
-| `--quiet` | `-q` | Suppress progress, show only final result |
-| `--config` | `-c` | Path to config file |
-| `--models` | | Override council models (comma-separated) |
-| `--chairman` | | Override chairman model |
-| `--file` | `-f` | Include file contents (repeatable) |
-| `--include` | `-i` | Include files by glob pattern (repeatable) |
-| `--version` | `-V` | Show version |
-
-## Agent-Friendly Features
-
-Small Council is designed to work well with coding agents and scripts:
-
-**Auto-detect piped output**: When stdout is piped (not a TTY), automatically outputs JSON:
-```bash
-small-council "query" | jq '.stage3.response'
-```
-
-**Progress on stderr**: Progress indicators and errors go to stderr, keeping stdout clean:
-```bash
-small-council "query" > result.json  # Progress visible, JSON to file
-small-council "query" 2>/dev/null > result.json  # Silent
-```
-
-**Answer-only mode**: Perfect for agents that just need the answer:
-```bash
-ANSWER=$(small-council -a "What's the capital of France?")
-```
+**Council Members**: GPT-5.2, GPT-5.2-pro, Gemini 3 Pro, Claude Sonnet 4, Grok 4
+**Chairman**: Claude Opus 4.5 (synthesizes only, doesn't participate in ranking)
 
 ---
 
 ## Claude Code Skill
 
-Use Small Council directly from Claude Code as a skill.
+The primary way to use Small Council is as a Claude Code skill.
 
-### Skill Installation
+### Quick Install
 
-1. **Create the skill directory:**
-   ```bash
-   mkdir -p ~/.claude/skills/small-council
-   ```
+```bash
+# 1. Clone and install CLI
+git clone https://github.com/eytanlevit/small-council.git
+cd small-council
+uv tool install .
 
-2. **Copy skill files:**
-   ```bash
-   cp -r skill/* ~/.claude/skills/small-council/
-   ```
+# 2. Install skill
+mkdir -p ~/.claude/skills/small-council
+cp -r skill/* ~/.claude/skills/small-council/
+chmod +x ~/.claude/skills/small-council/*.sh
 
-3. **Set your OpenRouter API key:**
-   ```bash
-   echo "OPENROUTER_API_KEY=sk-or-v1-your-key-here" > ~/.claude/skills/small-council/.env
-   ```
-
-4. **Make scripts executable:**
-   ```bash
-   chmod +x ~/.claude/skills/small-council/*.sh
-   ```
-
-5. **Install the CLI tool:**
-   ```bash
-   uv tool install small-council  # or from source: uv tool install .
-   ```
+# 3. Set API key
+echo "OPENROUTER_API_KEY=sk-or-v1-your-key-here" > ~/.claude/skills/small-council/.env
+```
 
 ### Using the Skill
 
 In Claude Code, just say:
-- "Ask the small council about this architecture decision"
-- "Consult the council on this code"
-- "What does the small council think about..."
+- "Ask the small council to review this code"
+- "Consult the council on this architecture"
+- "I'm stuck — what does the small council think?"
 
-The skill will:
-1. Craft a comprehensive prompt
-2. Gather relevant files
-3. Run the 3-stage deliberation in background (survives session restarts)
-4. Present the synthesized consensus
+The skill runs deliberation in tmux (survives session restarts) and returns the synthesized consensus.
 
 ### Skill Files
 
@@ -236,6 +99,82 @@ The skill will:
 
 ---
 
+## CLI Tool
+
+You can also use Small Council directly from the command line.
+
+### Installation
+
+```bash
+# From source
+git clone https://github.com/eytanlevit/small-council.git
+cd small-council
+uv tool install .
+```
+
+### Configuration
+
+Get an API key from [OpenRouter](https://openrouter.ai/) and set it:
+
+```bash
+export OPENROUTER_API_KEY=sk-or-v1-your-key-here
+```
+
+Or create `~/.small-council.yaml`:
+
+```yaml
+api_key: sk-or-v1-your-key-here
+council_models:
+  - openai/gpt-5.2
+  - openai/gpt-5.2-pro
+  - google/gemini-3-pro-preview
+  - anthropic/claude-sonnet-4
+  - x-ai/grok-4
+chairman_model: anthropic/claude-opus-4.5
+```
+
+### Usage
+
+```bash
+# Basic question
+small-council "What's the best way to handle authentication in a microservices architecture?"
+
+# Code review with files
+small-council -f src/auth.py -f src/middleware.py "Review this authentication implementation"
+
+# Include files by glob
+small-council -i "src/**/*.py" "What's the architecture of this codebase?"
+
+# Answer only (for scripts/agents)
+small-council -a "Your question"
+
+# JSON output
+small-council --json "Your question" > result.json
+```
+
+### Options
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--file` | `-f` | Include file contents (repeatable) |
+| `--include` | `-i` | Include files by glob pattern (repeatable) |
+| `--answer-only` | `-a` | Output only the final synthesized answer |
+| `--json` | `-j` | Output as JSON |
+| `--markdown` | `-m` | Output as Markdown |
+| `--quiet` | `-q` | Suppress progress output |
+| `--models` | | Override council models (comma-separated) |
+| `--chairman` | | Override chairman model |
+| `--config` | `-c` | Path to config file |
+| `--version` | `-V` | Show version |
+
+### Agent-Friendly Features
+
+- **Auto-JSON**: When stdout is piped, automatically outputs JSON
+- **Stderr progress**: Progress goes to stderr, results to stdout
+- **Answer-only mode**: `-a` returns just the final answer for easy parsing
+
+---
+
 ## JSON Output Schema
 
 ```json
@@ -246,10 +185,10 @@ The skill will:
     {"model": "google/gemini-3-pro-preview", "response": "..."}
   ],
   "stage2": [
-    {"model": "openai/gpt-5.2", "ranking": "...", "parsed_ranking": ["Response B", "Response A", "Response C", "Response D"]}
+    {"model": "openai/gpt-5.2", "ranking": "...", "parsed_ranking": ["Response B", "Response A", "Response C", "Response D", "Response E"]}
   ],
   "stage3": {
-    "model": "openai/gpt-5.2-pro",
+    "model": "anthropic/claude-opus-4.5",
     "response": "Final synthesized answer..."
   },
   "metadata": {
