@@ -170,14 +170,12 @@ STAGE 1 - Individual Responses (anonymized):
 STAGE 2 - Peer Rankings:
 {stage2_text}
 
-Your task as Chairman is to synthesize all of this information into a single, comprehensive, accurate answer to the user's original question. You should:
-- Draw from the best insights across all responses
-- Resolve disagreements using the peer rankings as quality signals
-- Add any important points that ALL responses missed - you have your own expertise
-- Correct any errors you notice, even if the council agreed on them
-- Provide your own expert perspective where it adds value
+Your task as Chairman is to synthesize all of this information into a single, comprehensive, accurate answer to the user's original question. Consider:
+- The individual responses and their insights
+- The peer rankings and what they reveal about response quality
+- Any patterns of agreement or disagreement
 
-Provide a clear, well-reasoned final answer that represents the council's collective wisdom enhanced by your own analysis:"""
+Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
     messages = [{"role": "user", "content": chairman_prompt}]
     response = await query_model(chairman_model, messages, api_key, api_url, timeout=timeout)

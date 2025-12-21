@@ -37,7 +37,7 @@ Small Council runs a 3-stage deliberation:
 ┌─────────────────────────────────────────────────────────────────────┐
 │  Stage 3: Chairman Synthesis                                        │
 │  ┌───────────────┐                                                  │
-│  │ Claude Opus   │ → Synthesizes final answer + adds own insights  │
+│  │ Claude Opus   │ → Synthesizes final consensus answer             │
 │  │     4.5       │                                                  │
 │  └───────────────┘                                                  │
 └─────────────────────────────────────────────────────────────────────┘
@@ -99,7 +99,7 @@ chairman_model: anthropic/claude-opus-4.5
 timeout: 120  # seconds per API call
 ```
 
-Note: The chairman is separate from council members. It synthesizes the final answer, can add its own insights, and correct errors - but doesn't participate in the initial response or ranking phases.
+Note: The chairman is separate from council members - it only synthesizes the final answer and doesn't participate in ranking.
 
 ## Usage
 
