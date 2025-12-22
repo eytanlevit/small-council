@@ -1,6 +1,6 @@
 # Small Council
 
-## Throw humanity's smartest AIs at any problem your coding agent has.
+*Throw humanity's smartest AIs at any problem your coding agent has.*
 
 Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-council).
 
