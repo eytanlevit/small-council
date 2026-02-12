@@ -12,9 +12,9 @@ Get expert guidance on coding questions through multi-LLM deliberation.
 
 The Small Council uses a 3-stage deliberation process:
 
-1. **Stage 1**: 5 frontier LLMs (GPT-5.2, GPT-5.2-pro, Gemini 3 Pro, Claude Sonnet 4, Grok 4) independently answer your question
+1. **Stage 1**: 4 frontier LLMs (GPT-5.2-Codex, GPT-5.2-pro, Gemini 3 Pro, Claude Opus 4.6) independently answer your question
 2. **Stage 2**: Each model anonymously ranks all responses
-3. **Stage 3**: Claude Opus 4.5 as chairman synthesizes the final consensus answer
+3. **Stage 3**: Claude Opus 4.6 as chairman synthesizes the final consensus answer
 
 This approach leverages the collective intelligence of multiple AI models, ensuring well-rounded, thoroughly-vetted answers.
 

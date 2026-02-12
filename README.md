@@ -8,7 +8,7 @@ Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-coun
 
 ## Use Cases
 
-- **Code Review**: Get 5 expert perspectives on your implementation
+- **Code Review**: Get 4 expert perspectives on your implementation
 - **Architecture Decisions**: "Should we use microservices or keep the monolith?"
 - **Breaking Out of Loops**: When your agent keeps failing, get fresh perspectives
 - **Plan Validation**: Review implementation plans before writing code
@@ -24,16 +24,16 @@ Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-coun
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │  Stage 1: Independent Responses                                     │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
-│  │ GPT-5.2 │ │GPT-5.2  │ │ Gemini  │ │ Claude  │ │ Grok 4  │       │
-│  │         │ │  pro    │ │ 3 Pro   │ │Sonnet 4 │ │         │       │
-│  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘       │
-└───────┼──────────┼──────────┼──────────┼──────────┼────────────────┘
-        │          │          │          │          │
-        ▼          ▼          ▼          ▼          ▼
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                 │
+│  │ GPT-5.2 │ │GPT-5.2  │ │ Gemini  │ │ Claude  │                 │
+│  │ Codex   │ │  pro    │ │ 3 Pro   │ │ Opus 4.6│                 │
+│  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘                 │
+└───────┼──────────┼──────────┼──────────┼─────────────────────────┘
+        │          │          │          │
+        ▼          ▼          ▼          ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │  Stage 2: Anonymous Peer Ranking                                    │
-│  Each model ranks all responses (A, B, C, D, E) without             │
+│  Each model ranks all responses (A, B, C, D) without                │
 │  knowing which model wrote which response                           │
 └─────────────────────────────────────────────────────────────────────┘
                                │
@@ -42,7 +42,7 @@ Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-coun
 │  Stage 3: Chairman Synthesis                                        │
 │  ┌───────────────┐                                                  │
 │  │ Claude Opus   │ → Synthesizes final consensus answer             │
-│  │     4.5       │                                                  │
+│  │     4.6       │                                                  │
 │  └───────────────┘                                                  │
 └─────────────────────────────────────────────────────────────────────┘
                                │
@@ -52,8 +52,8 @@ Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-coun
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Council Members**: GPT-5.2, GPT-5.2-pro, Gemini 3 Pro, Claude Sonnet 4, Grok 4
-**Chairman**: Claude Opus 4.5 (synthesizes only, doesn't participate in ranking)
+**Council Members**: GPT-5.2-Codex, GPT-5.2-pro, Gemini 3 Pro, Claude Opus 4.6
+**Chairman**: Claude Opus 4.6 (synthesizes only, doesn't participate in ranking)
 
 ---
 
@@ -125,12 +125,11 @@ Or create `~/.small-council.yaml`:
 ```yaml
 api_key: sk-or-v1-your-key-here
 council_models:
-  - openai/gpt-5.2
+  - openai/gpt-5.2-codex
   - openai/gpt-5.2-pro
   - google/gemini-3-pro-preview
-  - anthropic/claude-sonnet-4
-  - x-ai/grok-4
-chairman_model: anthropic/claude-opus-4.5
+  - anthropic/claude-opus-4.6
+chairman_model: anthropic/claude-opus-4.6
 ```
 
 ### Usage
@@ -181,23 +180,37 @@ small-council --json "Your question" > result.json
 {
   "query": "Your question",
   "stage1": [
-    {"model": "openai/gpt-5.2", "response": "..."},
+    {"model": "openai/gpt-5.2-codex", "response": "..."},
     {"model": "google/gemini-3-pro-preview", "response": "..."}
   ],
   "stage2": [
-    {"model": "openai/gpt-5.2", "ranking": "...", "parsed_ranking": ["Response B", "Response A", "Response C", "Response D", "Response E"]}
+    {"model": "openai/gpt-5.2-codex", "ranking": "...", "parsed_ranking": ["Response B", "Response A", "Response C", "Response D"]}
   ],
   "stage3": {
-    "model": "anthropic/claude-opus-4.5",
+    "model": "anthropic/claude-opus-4.6",
     "response": "Final synthesized answer..."
   },
   "metadata": {
-    "label_to_model": {"Response A": "openai/gpt-5.2", ...},
+    "label_to_model": {"Response A": "openai/gpt-5.2-codex", ...},
     "aggregate_rankings": [
       {"model": "google/gemini-3-pro-preview", "average_rank": 1.5},
-      {"model": "openai/gpt-5.2", "average_rank": 2.0}
+      {"model": "openai/gpt-5.2-codex", "average_rank": 2.0}
     ]
   }
+}
+```
+
+## Reasoning Policy
+
+Small Council enforces high reasoning effort for:
+- `openai/*codex*`
+- `anthropic/claude-opus-*`
+
+These requests are sent with:
+
+```json
+{
+  "reasoning": {"effort": "xhigh"}
 }
 ```
 
