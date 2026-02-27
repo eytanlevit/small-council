@@ -25,8 +25,8 @@ Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-coun
 ┌─────────────────────────────────────────────────────────────────────┐
 │  Stage 1: Independent Responses                                     │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                 │
-│  │ GPT-5.2 │ │GPT-5.2  │ │ Gemini  │ │ Claude  │                 │
-│  │ Codex   │ │  pro    │ │ 3 Pro   │ │ Opus 4.6│                 │
+│  │ GPT-5.3 │ │GPT-5.2  │ │ Gemini  │ │ Claude  │                 │
+│  │ Codex   │ │  pro    │ │3.1 Pro  │ │ Opus 4.6│                 │
 │  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘                 │
 └───────┼──────────┼──────────┼──────────┼─────────────────────────┘
         │          │          │          │
@@ -52,7 +52,7 @@ Inspired by [Andrej Karpathy's LLM Council](https://github.com/karpathy/llm-coun
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Council Members**: GPT-5.2-Codex, GPT-5.2-pro, Gemini 3 Pro, Claude Opus 4.6
+**Council Members**: GPT-5.3-Codex, GPT-5.2-pro, Gemini 3.1 Pro, Claude Opus 4.6
 **Chairman**: Claude Opus 4.6 (synthesizes only, doesn't participate in ranking)
 
 ---
@@ -125,9 +125,9 @@ Or create `~/.small-council.yaml`:
 ```yaml
 api_key: sk-or-v1-your-key-here
 council_models:
-  - openai/gpt-5.2-codex
+  - openai/gpt-5.3-codex
   - openai/gpt-5.2-pro
-  - google/gemini-3-pro-preview
+  - google/gemini-3.1-pro-preview
   - anthropic/claude-opus-4.6
 chairman_model: anthropic/claude-opus-4.6
 ```
@@ -180,21 +180,21 @@ small-council --json "Your question" > result.json
 {
   "query": "Your question",
   "stage1": [
-    {"model": "openai/gpt-5.2-codex", "response": "..."},
-    {"model": "google/gemini-3-pro-preview", "response": "..."}
+    {"model": "openai/gpt-5.3-codex", "response": "..."},
+    {"model": "google/gemini-3.1-pro-preview", "response": "..."}
   ],
   "stage2": [
-    {"model": "openai/gpt-5.2-codex", "ranking": "...", "parsed_ranking": ["Response B", "Response A", "Response C", "Response D"]}
+    {"model": "openai/gpt-5.3-codex", "ranking": "...", "parsed_ranking": ["Response B", "Response A", "Response C", "Response D"]}
   ],
   "stage3": {
     "model": "anthropic/claude-opus-4.6",
     "response": "Final synthesized answer..."
   },
   "metadata": {
-    "label_to_model": {"Response A": "openai/gpt-5.2-codex", ...},
+    "label_to_model": {"Response A": "openai/gpt-5.3-codex", ...},
     "aggregate_rankings": [
-      {"model": "google/gemini-3-pro-preview", "average_rank": 1.5},
-      {"model": "openai/gpt-5.2-codex", "average_rank": 2.0}
+      {"model": "google/gemini-3.1-pro-preview", "average_rank": 1.5},
+      {"model": "openai/gpt-5.3-codex", "average_rank": 2.0}
     ]
   }
 }

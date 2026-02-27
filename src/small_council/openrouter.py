@@ -18,7 +18,7 @@ async def query_model(
     Query a single model via OpenRouter API.
 
     Args:
-        model: OpenRouter model identifier (e.g., "openai/gpt-5.2-codex")
+        model: OpenRouter model identifier (e.g., "openai/gpt-5.3-codex")
         messages: List of message dicts with 'role' and 'content'
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
