@@ -20,6 +20,7 @@ DEFAULT_COUNCIL_MODELS = [
 DEFAULT_CHAIRMAN_MODEL = "anthropic/claude-opus-4.6"
 DEFAULT_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_TIMEOUT = 120.0
+DEFAULT_MAX_TOKENS = 32768
 
 
 @dataclass
@@ -30,6 +31,7 @@ class CouncilConfig:
     chairman_model: str = DEFAULT_CHAIRMAN_MODEL
     api_url: str = DEFAULT_API_URL
     timeout: float = DEFAULT_TIMEOUT
+    max_tokens: int = DEFAULT_MAX_TOKENS
 
 
 class ConfigError(Exception):
@@ -75,6 +77,7 @@ def load_config(
     chairman_model = DEFAULT_CHAIRMAN_MODEL
     api_url = DEFAULT_API_URL
     timeout = DEFAULT_TIMEOUT
+    max_tokens = DEFAULT_MAX_TOKENS
 
     # Load from config file if exists
     if config_path.exists():
@@ -100,6 +103,9 @@ def load_config(
         if "timeout" in config_data:
             timeout = float(config_data["timeout"])
             print(f"[config] Config file overrides timeout: {timeout}s", file=sys.stderr)
+        if "max_tokens" in config_data:
+            max_tokens = int(config_data["max_tokens"])
+            print(f"[config] Config file overrides max_tokens: {max_tokens}", file=sys.stderr)
     else:
         print("[config] Config file not found; using built-in defaults", file=sys.stderr)
 
@@ -135,7 +141,7 @@ def load_config(
         f"api_key_set={'yes' if api_key else 'no'}, "
         f"council_models={council_models}, "
         f"chairman_model={chairman_model}, "
-        f"api_url={api_url}, timeout={timeout}s",
+        f"api_url={api_url}, timeout={timeout}s, max_tokens={max_tokens}",
         file=sys.stderr,
     )
 
@@ -145,4 +151,5 @@ def load_config(
         chairman_model=chairman_model,
         api_url=api_url,
         timeout=timeout,
+        max_tokens=max_tokens,
     )

@@ -12,7 +12,8 @@ async def query_model(
     api_key: str,
     api_url: str = "https://openrouter.ai/api/v1/chat/completions",
     timeout: float = 120.0,
-    client: Optional[httpx.AsyncClient] = None
+    client: Optional[httpx.AsyncClient] = None,
+    max_tokens: int = 32768,
 ) -> Optional[Dict[str, Any]]:
     """
     Query a single model via OpenRouter API.
@@ -33,7 +34,7 @@ async def query_model(
         "Content-Type": "application/json",
     }
 
-    payload = build_request_payload(model, messages)
+    payload = build_request_payload(model, messages, max_tokens=max_tokens)
     reasoning_effort = payload.get("reasoning", {}).get("effort", "default")
     print(
         f"[{model}] Request start: endpoint={api_url} timeout={timeout}s "
@@ -88,13 +89,14 @@ def model_requires_xhigh_reasoning(model: str) -> bool:
     return is_openai_codex or is_anthropic_opus
 
 
-def build_request_payload(model: str, messages: List[Dict[str, str]]) -> Dict[str, Any]:
+def build_request_payload(model: str, messages: List[Dict[str, str]], max_tokens: int = 32768) -> Dict[str, Any]:
     """
     Build OpenRouter chat completion payload with model-specific reasoning settings.
     """
     payload: Dict[str, Any] = {
         "model": model,
         "messages": messages,
+        "max_tokens": max_tokens,
     }
     if model_requires_xhigh_reasoning(model):
         payload["reasoning"] = {"effort": "xhigh"}
@@ -106,7 +108,8 @@ async def query_models_parallel(
     messages: List[Dict[str, str]],
     api_key: str,
     api_url: str = "https://openrouter.ai/api/v1/chat/completions",
-    timeout: float = 120.0
+    timeout: float = 120.0,
+    max_tokens: int = 32768,
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """
     Query multiple models in parallel using a shared connection pool.
@@ -127,7 +130,7 @@ async def query_models_parallel(
         file=sys.stderr,
     )
     async with httpx.AsyncClient(timeout=timeout) as client:
-        tasks = [query_model(model, messages, api_key, api_url, timeout=timeout, client=client) for model in models]
+        tasks = [query_model(model, messages, api_key, api_url, timeout=timeout, client=client, max_tokens=max_tokens) for model in models]
         responses = await asyncio.gather(*tasks)
     results = {model: response for model, response in zip(models, responses)}
     success_count = sum(1 for response in results.values() if response is not None)

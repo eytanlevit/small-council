@@ -12,7 +12,8 @@ async def stage1_collect_responses(
     council_models: List[str],
     api_key: str,
     api_url: str,
-    timeout: float = 120.0
+    timeout: float = 120.0,
+    max_tokens: int = 32768,
 ) -> List[Dict[str, Any]]:
     """
     Stage 1: Collect individual responses from all council models.
@@ -28,7 +29,7 @@ async def stage1_collect_responses(
         List of dicts with 'model' and 'response' keys
     """
     messages = [{"role": "user", "content": user_query}]
-    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout)
+    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout, max_tokens=max_tokens)
 
     stage1_results = []
     for model, response in responses.items():
@@ -47,7 +48,8 @@ async def stage2_collect_rankings(
     council_models: List[str],
     api_key: str,
     api_url: str,
-    timeout: float = 120.0
+    timeout: float = 120.0,
+    max_tokens: int = 32768,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """
     Stage 2: Each model ranks the anonymized responses.
@@ -107,7 +109,7 @@ FINAL RANKING:
 Now provide your evaluation and ranking:"""
 
     messages = [{"role": "user", "content": ranking_prompt}]
-    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout)
+    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout, max_tokens=max_tokens)
 
     stage2_results = []
     for model, response in responses.items():
@@ -130,7 +132,8 @@ async def stage3_synthesize_final(
     chairman_model: str,
     api_key: str,
     api_url: str,
-    timeout: float = 120.0
+    timeout: float = 120.0,
+    max_tokens: int = 32768,
 ) -> Dict[str, Any]:
     """
     Stage 3: Chairman synthesizes final response.
@@ -178,7 +181,7 @@ Your task as Chairman is to synthesize all of this information into a single, co
 Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
     messages = [{"role": "user", "content": chairman_prompt}]
-    response = await query_model(chairman_model, messages, api_key, api_url, timeout=timeout)
+    response = await query_model(chairman_model, messages, api_key, api_url, timeout=timeout, max_tokens=max_tokens)
 
     if response is None:
         return {
@@ -267,6 +270,7 @@ async def run_full_council(
     api_key: str,
     api_url: str = "https://openrouter.ai/api/v1/chat/completions",
     timeout: float = 120.0,
+    max_tokens: int = 32768,
     on_stage_complete: Optional[Callable[[str, Any], Awaitable[None]]] = None
 ) -> Tuple[List, List, Dict, Dict]:
     """
@@ -286,7 +290,7 @@ async def run_full_council(
     """
     # Stage 1
     stage1_results = await stage1_collect_responses(
-        user_query, council_models, api_key, api_url, timeout=timeout
+        user_query, council_models, api_key, api_url, timeout=timeout, max_tokens=max_tokens
     )
 
     if on_stage_complete:
@@ -301,7 +305,7 @@ async def run_full_council(
     # Stage 2 - only use models that responded in Stage 1
     responding_models = [result['model'] for result in stage1_results]
     stage2_results, label_to_model = await stage2_collect_rankings(
-        user_query, stage1_results, responding_models, api_key, api_url, timeout=timeout
+        user_query, stage1_results, responding_models, api_key, api_url, timeout=timeout, max_tokens=max_tokens
     )
     aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
 
@@ -315,7 +319,7 @@ async def run_full_council(
     # Stage 3
     stage3_result = await stage3_synthesize_final(
         user_query, stage1_results, stage2_results,
-        chairman_model, api_key, api_url, timeout=timeout
+        chairman_model, api_key, api_url, timeout=timeout, max_tokens=max_tokens
     )
 
     if on_stage_complete:

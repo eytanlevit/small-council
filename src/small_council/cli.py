@@ -200,6 +200,7 @@ def main(
             api_key=config.api_key,
             api_url=config.api_url,
             timeout=config.timeout,
+            max_tokens=config.max_tokens,
             on_stage_complete=on_stage_complete if use_rich else None,
         )
 
