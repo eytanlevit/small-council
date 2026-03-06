@@ -19,7 +19,7 @@ async def query_model(
     Query a single model via OpenRouter API.
 
     Args:
-        model: OpenRouter model identifier (e.g., "openai/gpt-5.3-codex")
+        model: OpenRouter model identifier (e.g., "openai/gpt-5.4")
         messages: List of message dicts with 'role' and 'content'
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
@@ -81,12 +81,12 @@ def model_requires_xhigh_reasoning(model: str) -> bool:
     """
     Return True when the model should be forced to maximum reasoning effort.
 
-    Current policy: all OpenAI Codex variants and all Anthropic Opus variants.
+    Current policy: all OpenAI GPT-5.4 variants and all Anthropic Opus variants.
     """
     lower_model = model.lower()
-    is_openai_codex = lower_model.startswith("openai/") and "codex" in lower_model
+    is_openai_gpt54 = lower_model.startswith("openai/") and "gpt-5.4" in lower_model
     is_anthropic_opus = lower_model.startswith("anthropic/claude-opus-")
-    return is_openai_codex or is_anthropic_opus
+    return is_openai_gpt54 or is_anthropic_opus
 
 
 def build_request_payload(model: str, messages: List[Dict[str, str]], max_tokens: int = 32768) -> Dict[str, Any]:

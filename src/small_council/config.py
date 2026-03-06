@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 
 
 DEFAULT_COUNCIL_MODELS = [
-    "openai/gpt-5.3-codex",
-    "openai/gpt-5.2-pro",
+    "openai/gpt-5.4",
+    "openai/gpt-5.4-pro",
     "google/gemini-3.1-pro-preview",
     "anthropic/claude-opus-4.6",
 ]

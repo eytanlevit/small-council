@@ -11,9 +11,9 @@ class OpenRouterPayloadTests(unittest.TestCase):
     def setUp(self):
         self.messages = [{"role": "user", "content": "test"}]
 
-    def test_codex_models_require_xhigh_reasoning(self):
-        self.assertTrue(model_requires_xhigh_reasoning("openai/gpt-5.3-codex"))
-        self.assertTrue(model_requires_xhigh_reasoning("openai/gpt-5-codex"))
+    def test_gpt54_models_require_xhigh_reasoning(self):
+        self.assertTrue(model_requires_xhigh_reasoning("openai/gpt-5.4"))
+        self.assertTrue(model_requires_xhigh_reasoning("openai/gpt-5.4-pro"))
 
     def test_opus_models_require_xhigh_reasoning(self):
         self.assertTrue(model_requires_xhigh_reasoning("anthropic/claude-opus-4.6"))
@@ -23,8 +23,8 @@ class OpenRouterPayloadTests(unittest.TestCase):
         self.assertFalse(model_requires_xhigh_reasoning("openai/gpt-5.2-pro"))
         self.assertFalse(model_requires_xhigh_reasoning("google/gemini-3.1-pro-preview"))
 
-    def test_payload_includes_reasoning_for_codex(self):
-        payload = build_request_payload("openai/gpt-5.3-codex", self.messages)
+    def test_payload_includes_reasoning_for_gpt54(self):
+        payload = build_request_payload("openai/gpt-5.4", self.messages)
         self.assertEqual(payload["reasoning"]["effort"], "xhigh")
 
     def test_payload_includes_reasoning_for_opus(self):
