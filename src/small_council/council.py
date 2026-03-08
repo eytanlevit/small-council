@@ -12,8 +12,9 @@ async def stage1_collect_responses(
     council_models: List[str],
     api_key: str,
     api_url: str,
-    timeout: float = 120.0,
+    timeout: float = 3600.0,
     max_tokens: int = 32768,
+    model_timeouts: Optional[Dict[str, float]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Stage 1: Collect individual responses from all council models.
@@ -24,12 +25,13 @@ async def stage1_collect_responses(
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
         timeout: Request timeout in seconds
+        model_timeouts: Optional per-model timeout overrides
 
     Returns:
         List of dicts with 'model' and 'response' keys
     """
     messages = [{"role": "user", "content": user_query}]
-    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout, max_tokens=max_tokens)
+    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout, model_timeouts=model_timeouts, max_tokens=max_tokens)
 
     stage1_results = []
     for model, response in responses.items():
@@ -48,8 +50,9 @@ async def stage2_collect_rankings(
     council_models: List[str],
     api_key: str,
     api_url: str,
-    timeout: float = 120.0,
+    timeout: float = 3600.0,
     max_tokens: int = 32768,
+    model_timeouts: Optional[Dict[str, float]] = None,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """
     Stage 2: Each model ranks the anonymized responses.
@@ -61,6 +64,7 @@ async def stage2_collect_rankings(
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
         timeout: Request timeout in seconds
+        model_timeouts: Optional per-model timeout overrides
 
     Returns:
         Tuple of (rankings list, label_to_model mapping)
@@ -109,7 +113,7 @@ FINAL RANKING:
 Now provide your evaluation and ranking:"""
 
     messages = [{"role": "user", "content": ranking_prompt}]
-    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout, max_tokens=max_tokens)
+    responses = await query_models_parallel(council_models, messages, api_key, api_url, timeout=timeout, model_timeouts=model_timeouts, max_tokens=max_tokens)
 
     stage2_results = []
     for model, response in responses.items():
@@ -132,7 +136,7 @@ async def stage3_synthesize_final(
     chairman_model: str,
     api_key: str,
     api_url: str,
-    timeout: float = 120.0,
+    timeout: float = 3600.0,
     max_tokens: int = 32768,
 ) -> Dict[str, Any]:
     """
@@ -269,8 +273,9 @@ async def run_full_council(
     chairman_model: str,
     api_key: str,
     api_url: str = "https://openrouter.ai/api/v1/chat/completions",
-    timeout: float = 120.0,
+    timeout: float = 3600.0,
     max_tokens: int = 32768,
+    model_timeouts: Optional[Dict[str, float]] = None,
     on_stage_complete: Optional[Callable[[str, Any], Awaitable[None]]] = None
 ) -> Tuple[List, List, Dict, Dict]:
     """
@@ -283,6 +288,7 @@ async def run_full_council(
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
         timeout: Request timeout in seconds
+        model_timeouts: Optional per-model timeout overrides
         on_stage_complete: Optional async callback called after each stage
 
     Returns:
@@ -290,7 +296,7 @@ async def run_full_council(
     """
     # Stage 1
     stage1_results = await stage1_collect_responses(
-        user_query, council_models, api_key, api_url, timeout=timeout, max_tokens=max_tokens
+        user_query, council_models, api_key, api_url, timeout=timeout, max_tokens=max_tokens, model_timeouts=model_timeouts
     )
 
     if on_stage_complete:
@@ -305,7 +311,7 @@ async def run_full_council(
     # Stage 2 - only use models that responded in Stage 1
     responding_models = [result['model'] for result in stage1_results]
     stage2_results, label_to_model = await stage2_collect_rankings(
-        user_query, stage1_results, responding_models, api_key, api_url, timeout=timeout, max_tokens=max_tokens
+        user_query, stage1_results, responding_models, api_key, api_url, timeout=timeout, max_tokens=max_tokens, model_timeouts=model_timeouts
     )
     aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
 

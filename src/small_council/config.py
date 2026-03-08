@@ -4,7 +4,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import yaml
 from dotenv import load_dotenv
@@ -19,7 +19,7 @@ DEFAULT_COUNCIL_MODELS = [
 
 DEFAULT_CHAIRMAN_MODEL = "anthropic/claude-opus-4.6"
 DEFAULT_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_TIMEOUT = 120.0
+DEFAULT_TIMEOUT = 3600.0
 DEFAULT_MAX_TOKENS = 32768
 
 
@@ -32,6 +32,7 @@ class CouncilConfig:
     api_url: str = DEFAULT_API_URL
     timeout: float = DEFAULT_TIMEOUT
     max_tokens: int = DEFAULT_MAX_TOKENS
+    model_timeouts: Dict[str, float] = field(default_factory=dict)
 
 
 class ConfigError(Exception):
@@ -78,6 +79,7 @@ def load_config(
     api_url = DEFAULT_API_URL
     timeout = DEFAULT_TIMEOUT
     max_tokens = DEFAULT_MAX_TOKENS
+    model_timeouts: Dict[str, float] = {}
 
     # Load from config file if exists
     if config_path.exists():
@@ -92,8 +94,18 @@ def load_config(
             api_key = config_data["api_key"]
             print("[config] API key provided by config file", file=sys.stderr)
         if "council_models" in config_data:
-            council_models = config_data["council_models"]
+            raw_models = config_data["council_models"]
+            council_models = []
+            for entry in raw_models:
+                if isinstance(entry, str):
+                    council_models.append(entry)
+                elif isinstance(entry, dict) and "model" in entry:
+                    council_models.append(entry["model"])
+                    if "timeout" in entry:
+                        model_timeouts[entry["model"]] = float(entry["timeout"])
             print(f"[config] Config file overrides council models ({len(council_models)} models)", file=sys.stderr)
+            if model_timeouts:
+                print(f"[config] Per-model timeouts: {model_timeouts}", file=sys.stderr)
         if "chairman_model" in config_data:
             chairman_model = config_data["chairman_model"]
             print(f"[config] Config file overrides chairman model: {chairman_model}", file=sys.stderr)
@@ -141,7 +153,8 @@ def load_config(
         f"api_key_set={'yes' if api_key else 'no'}, "
         f"council_models={council_models}, "
         f"chairman_model={chairman_model}, "
-        f"api_url={api_url}, timeout={timeout}s, max_tokens={max_tokens}",
+        f"api_url={api_url}, timeout={timeout}s, max_tokens={max_tokens}, "
+        f"model_timeouts={model_timeouts}",
         file=sys.stderr,
     )
 
@@ -152,4 +165,5 @@ def load_config(
         api_url=api_url,
         timeout=timeout,
         max_tokens=max_tokens,
+        model_timeouts=model_timeouts,
     )

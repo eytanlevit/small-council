@@ -11,7 +11,7 @@ async def query_model(
     messages: List[Dict[str, str]],
     api_key: str,
     api_url: str = "https://openrouter.ai/api/v1/chat/completions",
-    timeout: float = 120.0,
+    timeout: float = 3600.0,
     client: Optional[httpx.AsyncClient] = None,
     max_tokens: int = 32768,
 ) -> Optional[Dict[str, Any]]:
@@ -23,7 +23,7 @@ async def query_model(
         messages: List of message dicts with 'role' and 'content'
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
-        timeout: Request timeout in seconds
+        timeout: Wall-clock timeout in seconds (enforced via asyncio.wait_for)
         client: Optional shared AsyncClient (creates one if not provided)
 
     Returns:
@@ -62,15 +62,20 @@ async def query_model(
 
     try:
         if client:
-            return await do_request(client)
+            result = await asyncio.wait_for(do_request(client), timeout=timeout)
         else:
-            async with httpx.AsyncClient(timeout=timeout) as c:
-                return await do_request(c)
+            # Use a generous read timeout but enforce wall-clock via wait_for
+            async with httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=30.0)) as c:
+                result = await asyncio.wait_for(do_request(c), timeout=timeout)
+        return result
+    except asyncio.TimeoutError:
+        print(f"[{model}] Request TIMEOUT after {timeout}s — proceeding without this response", file=sys.stderr)
+        return None
     except httpx.HTTPStatusError as e:
         print(f"[{model}] HTTP {e.response.status_code}: {e.response.text[:200]}", file=sys.stderr)
         return None
     except httpx.TimeoutException:
-        print(f"[{model}] Request timed out", file=sys.stderr)
+        print(f"[{model}] Request timed out (httpx)", file=sys.stderr)
         return None
     except Exception as e:
         print(f"[{model}] Error: {type(e).__name__}: {e}", file=sys.stderr)
@@ -108,7 +113,8 @@ async def query_models_parallel(
     messages: List[Dict[str, str]],
     api_key: str,
     api_url: str = "https://openrouter.ai/api/v1/chat/completions",
-    timeout: float = 120.0,
+    timeout: float = 3600.0,
+    model_timeouts: Optional[Dict[str, float]] = None,
     max_tokens: int = 32768,
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """
@@ -119,18 +125,35 @@ async def query_models_parallel(
         messages: List of message dicts to send to each model
         api_key: OpenRouter API key
         api_url: OpenRouter API endpoint
-        timeout: Request timeout in seconds
+        timeout: Default wall-clock timeout in seconds
+        model_timeouts: Optional per-model timeout overrides
+        max_tokens: Maximum tokens for each response
 
     Returns:
         Dict mapping model identifier to response dict (or None if failed)
     """
+    # Determine per-model timeouts
+    timeouts = {}
+    for model in models:
+        if model_timeouts and model in model_timeouts:
+            timeouts[model] = model_timeouts[model]
+        else:
+            timeouts[model] = timeout
+
+    max_timeout = max(timeouts.values())
+
     print(
-        f"[openrouter] Parallel request start: model_count={len(models)} timeout={timeout}s "
+        f"[openrouter] Parallel request start: model_count={len(models)} "
+        f"default_timeout={timeout}s max_timeout={max_timeout}s "
         f"models={models}",
         file=sys.stderr,
     )
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        tasks = [query_model(model, messages, api_key, api_url, timeout=timeout, client=client, max_tokens=max_tokens) for model in models]
+    async with httpx.AsyncClient(timeout=httpx.Timeout(max_timeout, connect=30.0)) as client:
+        tasks = [
+            query_model(model, messages, api_key, api_url,
+                       timeout=timeouts[model], client=client, max_tokens=max_tokens)
+            for model in models
+        ]
         responses = await asyncio.gather(*tasks)
     results = {model: response for model, response in zip(models, responses)}
     success_count = sum(1 for response in results.values() if response is not None)
