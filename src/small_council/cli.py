@@ -5,8 +5,10 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
+import click
 import typer
 from rich.console import Console
+from typer.core import TyperGroup
 
 from . import __version__
 from .config import load_config, ConfigError
@@ -14,10 +16,43 @@ from .council import run_full_council
 from .files import build_prompt_with_files
 from .output import RichOutput, format_json, format_markdown
 
+
+class _SubcommandAwareGroup(TyperGroup):
+    """Typer group that correctly routes subcommands even when a positional
+    argument is declared on the callback.
+
+    Without this, Click's argument parser consumes the subcommand name
+    (e.g. ``tmux``) as the value of the positional ``query`` argument,
+    making ``small-council tmux start ...`` impossible.
+    """
+
+    def parse_args(self, ctx: click.Context, args: list) -> list:
+        if (
+            args
+            and not args[0].startswith("-")
+            and args[0] in self.list_commands(ctx)
+        ):
+            cmd_name = args[0]
+            remaining = args[1:]
+            # Parse *only* options (skip positional arguments) so that
+            # the subcommand name is not consumed as a positional value.
+            saved_params = self.params[:]
+            self.params = [
+                p for p in self.params if not isinstance(p, click.Argument)
+            ]
+            rest = click.Command.parse_args(self, ctx, remaining)
+            self.params = saved_params
+            ctx._protected_args = [cmd_name]
+            ctx.args = rest
+            return ctx.args
+        return super().parse_args(ctx, args)
+
+
 app = typer.Typer(
     name="small-council",
     help="Multi-LLM deliberation via OpenRouter",
     add_completion=False,
+    cls=_SubcommandAwareGroup,
 )
 
 # Separate consoles: stderr for progress, stdout for results
@@ -220,6 +255,113 @@ def main(
         print(format_json(user_query, stage1, stage2, stage3, metadata))
     elif use_markdown:
         print(format_markdown(user_query, stage1, stage2, stage3, metadata))
+
+
+# ---------------------------------------------------------------------------
+# Tmux subcommand group
+# ---------------------------------------------------------------------------
+
+tmux_app = typer.Typer(
+    name="tmux",
+    help="Tmux session management for long-running council queries",
+)
+app.add_typer(tmux_app)
+
+
+@tmux_app.command("start")
+def tmux_start(
+    prompt: Optional[str] = typer.Option(
+        None,
+        "--prompt",
+        "-p",
+        help="The prompt to send to the council",
+    ),
+    prompt_file: Optional[Path] = typer.Option(
+        None,
+        "--prompt-file",
+        "-P",
+        help="Path to a file containing the prompt",
+    ),
+    files: Optional[List[str]] = typer.Option(
+        None,
+        "--file",
+        "-f",
+        help="Include file contents in prompt (can be repeated)",
+    ),
+):
+    """Start a Small Council session in a detached tmux window."""
+    from .tmux import start
+
+    # Resolve prompt
+    resolved_prompt = prompt
+    if prompt_file is not None:
+        if not prompt_file.exists():
+            stderr_console.print(f"[red]Error:[/] Prompt file not found: {prompt_file}")
+            raise typer.Exit(1)
+        resolved_prompt = prompt_file.read_text()
+
+    if not resolved_prompt:
+        stderr_console.print("[red]Error:[/] No prompt provided. Use -p 'prompt' or -P /path/to/file")
+        raise typer.Exit(1)
+
+    start(prompt=resolved_prompt, files=files or None)
+
+
+@tmux_app.command("wait")
+def tmux_wait(
+    session_id: str = typer.Argument(..., help="The tmux session ID to wait for"),
+    timeout: int = typer.Option(
+        1800,
+        "--timeout",
+        "-t",
+        help="Maximum seconds to wait (default 1800)",
+    ),
+    poll_interval: int = typer.Option(
+        10,
+        "--poll-interval",
+        "-i",
+        help="Seconds between status checks (default 10)",
+    ),
+):
+    """Wait for a Small Council tmux session to complete."""
+    from .tmux import wait
+
+    wait(session_id=session_id, timeout=timeout, poll_interval=poll_interval)
+
+
+@tmux_app.command("status")
+def tmux_status(
+    session_id: Optional[str] = typer.Argument(None, help="Session ID to check"),
+    list_all: bool = typer.Option(
+        False,
+        "--list",
+        "-l",
+        help="List all council sessions",
+    ),
+):
+    """Check status of Small Council tmux sessions."""
+    from .tmux import status
+
+    status(session_id=session_id, list_all=list_all)
+
+
+@tmux_app.command("cleanup")
+def tmux_cleanup(
+    older_than: float = typer.Option(
+        1.0,
+        "--older-than",
+        help="Clean sessions older than this many hours (default 1)",
+    ),
+    all_sessions: bool = typer.Option(
+        False,
+        "--all",
+        help="Clean ALL council sessions",
+    ),
+):
+    """Clean up old Small Council tmux sessions and temp files."""
+    from .tmux import cleanup
+
+    cleanup(older_than=older_than, all_sessions=all_sessions)
 
 
 if __name__ == "__main__":

@@ -64,18 +64,14 @@ The primary way to use Small Council is as a Claude Code skill.
 ### Quick Install
 
 ```bash
-# 1. Clone and install CLI
-git clone https://github.com/eytanlevit/small-council.git
-cd small-council
-uv tool install .
+# 1. Install CLI
+uv tool install git+https://github.com/eytanlevit/small-council
 
-# 2. Install skill
-mkdir -p ~/.claude/skills/small-council
-cp -r skill/* ~/.claude/skills/small-council/
-chmod +x ~/.claude/skills/small-council/*.sh
+# 2. Install skill (via skills.sh)
+npx skills add eytanlevit/small-council
 
 # 3. Set API key
-echo "OPENROUTER_API_KEY=sk-or-v1-your-key-here" > ~/.claude/skills/small-council/.env
+export OPENROUTER_API_KEY=sk-or-v1-your-key-here
 ```
 
 ### Using the Skill
@@ -85,17 +81,7 @@ In Claude Code, just say:
 - "Consult the council on this architecture"
 - "I'm stuck — what does the small council think?"
 
-The skill runs deliberation in tmux (survives session restarts) and returns the synthesized consensus.
-
-### Skill Files
-
-| File | Purpose |
-|------|---------|
-| `SKILL.md` | Instructions Claude follows when skill is triggered |
-| `council-tmux-start.sh` | Starts council in tmux session |
-| `council-tmux-wait.sh` | Waits for completion, returns output |
-| `council-tmux-status.sh` | Check status or list sessions |
-| `council-tmux-cleanup.sh` | Clean up old sessions |
+The skill runs deliberation in tmux via `small-council tmux` commands (survives session restarts) and returns the synthesized consensus.
 
 ---
 

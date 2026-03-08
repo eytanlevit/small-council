@@ -12,7 +12,7 @@ Get expert guidance on coding questions through multi-LLM deliberation.
 
 The Small Council uses a 3-stage deliberation process:
 
-1. **Stage 1**: 4 frontier LLMs (GPT-5.4, GPT-5.4-Pro, Gemini 3 Pro, Claude Opus 4.6) independently answer your question
+1. **Stage 1**: 4 frontier LLMs (GPT-5.4, GPT-5.4-Pro, Gemini 3.1 Pro, Claude Opus 4.6) independently answer your question
 2. **Stage 2**: Each model anonymously ranks all responses
 3. **Stage 3**: Claude Opus 4.6 as chairman synthesizes the final consensus answer
 
@@ -32,8 +32,9 @@ Not for simple questions - use when you want multiple expert perspectives synthe
 
 ## Prerequisites
 
-- `OPENROUTER_API_KEY` set in `~/.claude/skills/small-council/.env`
-- Small Council CLI installed: `uv tool install small-council`
+- `OPENROUTER_API_KEY` environment variable set
+- Small Council CLI installed: `uv tool install small-council` (or `uv tool install git+https://github.com/eytanlevit/small-council`)
+- `tmux` installed
 
 ## Process
 
@@ -92,7 +93,7 @@ Display to user:
 #### Step 4a: Start Council in Tmux
 
 ```bash
-~/.claude/skills/small-council/council-tmux-start.sh \
+small-council tmux start \
   -p "Your comprehensive prompt here" \
   -f "file1.ts" -f "file2.ts"
 ```
@@ -112,7 +113,7 @@ This outputs JSON with session info:
 
 ```bash
 # Wait up to 30 minutes, polling every 30 seconds
-~/.claude/skills/small-council/council-tmux-wait.sh "council-SESSIONID" 1800 30
+small-council tmux wait "council-SESSIONID" --timeout 1800 --poll-interval 30
 ```
 
 **IMPORTANT**: Use a 10-minute timeout (600000ms, the Bash tool maximum) and loop if needed:
@@ -120,7 +121,7 @@ This outputs JSON with session info:
 ```bash
 # First attempt - wait up to 10 minutes
 Bash(
-  command: "~/.claude/skills/small-council/council-tmux-wait.sh 'council-SESSIONID' 600 30",
+  command: "small-council tmux wait 'council-SESSIONID' --timeout 600 --poll-interval 30",
   timeout: 600000,
   description: "Waiting for Small Council response"
 )
@@ -130,7 +131,7 @@ If still running after 10 minutes, call again:
 ```bash
 # Continue waiting another 10 minutes
 Bash(
-  command: "~/.claude/skills/small-council/council-tmux-wait.sh 'council-SESSIONID' 600 30",
+  command: "small-council tmux wait 'council-SESSIONID' --timeout 600 --poll-interval 30",
   timeout: 600000,
   description: "Continuing to wait for Small Council response"
 )
@@ -143,12 +144,12 @@ Repeat until complete or 30 minutes total elapsed.
 If you need to check without waiting:
 
 ```bash
-~/.claude/skills/small-council/council-tmux-status.sh "council-SESSIONID"
+small-council tmux status "council-SESSIONID"
 ```
 
 Or list all sessions:
 ```bash
-~/.claude/skills/small-council/council-tmux-status.sh --list
+small-council tmux status --list
 ```
 
 #### Resuming After Context Refresh
@@ -157,12 +158,12 @@ If Claude's context was refreshed mid-wait:
 
 1. List existing sessions:
    ```bash
-   ~/.claude/skills/small-council/council-tmux-status.sh --list
+   small-council tmux status --list
    ```
 
 2. Check/wait for the session:
    ```bash
-   ~/.claude/skills/small-council/council-tmux-wait.sh "council-SESSIONID" 600 30
+   small-council tmux wait "council-SESSIONID" --timeout 600 --poll-interval 30
    ```
 
 3. If completed, the output file persists at `/tmp/council-SESSIONID.out`
@@ -182,7 +183,7 @@ When the council responds:
 - Output captured to `/tmp/council-<session>.out`
 - Completion marker at `/tmp/council-<session>.done`
 - Sessions survive Claude process termination
-- Cleanup old sessions: `~/.claude/skills/small-council/council-tmux-cleanup.sh`
+- Cleanup old sessions: `small-council tmux cleanup`
 - The tool supports glob patterns: `-f "src/**/*.ts"` and multiple file flags
 
 ## Troubleshooting
@@ -191,7 +192,7 @@ When the council responds:
 
 **Find existing sessions:**
 ```bash
-~/.claude/skills/small-council/council-tmux-status.sh --list
+small-council tmux status --list
 ```
 
 **View session output in real-time:**
@@ -207,11 +208,11 @@ tmux kill-session -t council-SESSIONID
 
 **Cleanup old sessions:**
 ```bash
-~/.claude/skills/small-council/council-tmux-cleanup.sh --older-than 2
+small-council tmux cleanup --older-than 2
 ```
 
 ### API Key Issues
 
-- Ensure `OPENROUTER_API_KEY` is set in `~/.claude/skills/small-council/.env`
+- Ensure `OPENROUTER_API_KEY` environment variable is set
 - Check API key is valid and has credits at openrouter.ai
 - The council queries 4 models in parallel + 1 chairman, so ensure sufficient rate limits
