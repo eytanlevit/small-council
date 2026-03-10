@@ -1,7 +1,20 @@
 ---
 name: small-council
-description: Consult the Small Council - a multi-LLM deliberation system that gathers independent answers from multiple frontier AI models, has them anonymously rank each other's responses, then synthesizes a consensus answer. Use for complex coding questions, architectural decisions, code reviews, debugging challenges, or when you want multiple expert perspectives. Trigger when user mentions "small council", "ask the council", "consult the council", or wants multi-model deliberation on code.
-allowed-tools: [Task, Bash, BashOutput, Read, Grep, Glob, TaskOutput]
+description: >-
+  Consult the Small Council - a multi-LLM deliberation system that gathers
+  independent answers from multiple frontier AI models, has them anonymously
+  rank each other's responses, then synthesizes a consensus answer. Use for
+  complex coding questions, architectural decisions, code reviews, debugging
+  challenges, or when you want multiple expert perspectives. Trigger with
+  "small council", "ask the council", "consult the council", "get a second
+  opinion", or "what do other models think".
+license: MIT
+compatibility: Requires macOS or Linux, Python 3.10+, tmux, uv or pipx, and OPENROUTER_API_KEY with OpenRouter credits.
+metadata:
+  author: Eytan Levit
+  version: 0.1.0
+  repo: https://github.com/eytanlevit/small-council
+allowed-tools: Task Bash Read Grep Glob
 ---
 
 # Small Council Consultation
@@ -37,6 +50,12 @@ Not for simple questions - use when you want multiple expert perspectives synthe
 - `tmux` installed
 
 ## Process
+
+### 0. Ensure Dependencies (First Use)
+```bash
+command -v small-council || bash ~/.claude/skills/small-council/scripts/setup.sh
+```
+If setup reports issues, help the user resolve them before proceeding.
 
 ### 1. Think Deeply About the Question
 
@@ -176,43 +195,3 @@ When the council responds:
 - Extract actionable recommendations
 - Note any follow-up questions to explore
 - If relevant, mention which aspects had strong agreement vs. varied perspectives
-
-## Technical Notes
-
-- Council sessions run in tmux at `council-<timestamp>-<pid>`
-- Output captured to `/tmp/council-<session>.out`
-- Completion marker at `/tmp/council-<session>.done`
-- Sessions survive Claude process termination
-- Cleanup old sessions: `small-council tmux cleanup`
-- The tool supports glob patterns: `-f "src/**/*.ts"` and multiple file flags
-
-## Troubleshooting
-
-### Tmux Session Issues
-
-**Find existing sessions:**
-```bash
-small-council tmux status --list
-```
-
-**View session output in real-time:**
-```bash
-tmux attach -t council-SESSIONID
-# Ctrl-B D to detach without killing
-```
-
-**Kill stuck session:**
-```bash
-tmux kill-session -t council-SESSIONID
-```
-
-**Cleanup old sessions:**
-```bash
-small-council tmux cleanup --older-than 2
-```
-
-### API Key Issues
-
-- Ensure `OPENROUTER_API_KEY` environment variable is set
-- Check API key is valid and has credits at openrouter.ai
-- The council queries 4 models in parallel + 1 chairman, so ensure sufficient rate limits
