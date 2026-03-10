@@ -276,7 +276,8 @@ async def run_full_council(
     timeout: float = 3600.0,
     max_tokens: int = 32768,
     model_timeouts: Optional[Dict[str, float]] = None,
-    on_stage_complete: Optional[Callable[[str, Any], Awaitable[None]]] = None
+    on_stage_complete: Optional[Callable[[str, Any], Awaitable[None]]] = None,
+    skip_ranking_models: Optional[List[str]] = None,
 ) -> Tuple[List, List, Dict, Dict]:
     """
     Run the complete 3-stage council process.
@@ -290,6 +291,7 @@ async def run_full_council(
         timeout: Request timeout in seconds
         model_timeouts: Optional per-model timeout overrides
         on_stage_complete: Optional async callback called after each stage
+        skip_ranking_models: Models to exclude from Stage 2 ranking (they still get ranked by others)
 
     Returns:
         Tuple of (stage1_results, stage2_results, stage3_result, metadata)
@@ -310,6 +312,8 @@ async def run_full_council(
 
     # Stage 2 - only use models that responded in Stage 1
     responding_models = [result['model'] for result in stage1_results]
+    if skip_ranking_models:
+        responding_models = [m for m in responding_models if m not in skip_ranking_models]
     stage2_results, label_to_model = await stage2_collect_rankings(
         user_query, stage1_results, responding_models, api_key, api_url, timeout=timeout, max_tokens=max_tokens, model_timeouts=model_timeouts
     )

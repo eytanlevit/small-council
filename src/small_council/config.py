@@ -33,6 +33,7 @@ class CouncilConfig:
     timeout: float = DEFAULT_TIMEOUT
     max_tokens: int = DEFAULT_MAX_TOKENS
     model_timeouts: Dict[str, float] = field(default_factory=dict)
+    skip_ranking_models: List[str] = field(default_factory=list)
 
 
 class ConfigError(Exception):
@@ -44,6 +45,7 @@ def load_config(
     config_path: Optional[Path] = None,
     models_override: Optional[List[str]] = None,
     chairman_override: Optional[str] = None,
+    skip_ranking_override: Optional[List[str]] = None,
 ) -> CouncilConfig:
     """
     Load configuration from YAML file and environment variables.
@@ -58,6 +60,7 @@ def load_config(
         config_path: Path to config file (default: ~/.small-council.yaml)
         models_override: Override council models from CLI
         chairman_override: Override chairman model from CLI
+        skip_ranking_override: Override skip_ranking_models from CLI
 
     Returns:
         CouncilConfig instance
@@ -80,6 +83,7 @@ def load_config(
     timeout = DEFAULT_TIMEOUT
     max_tokens = DEFAULT_MAX_TOKENS
     model_timeouts: Dict[str, float] = {}
+    skip_ranking_models: List[str] = []
 
     # Load from config file if exists
     if config_path.exists():
@@ -118,6 +122,9 @@ def load_config(
         if "max_tokens" in config_data:
             max_tokens = int(config_data["max_tokens"])
             print(f"[config] Config file overrides max_tokens: {max_tokens}", file=sys.stderr)
+        if "skip_ranking_models" in config_data:
+            skip_ranking_models = list(config_data["skip_ranking_models"])
+            print(f"[config] Config file sets skip_ranking_models: {skip_ranking_models}", file=sys.stderr)
     else:
         print("[config] Config file not found; using built-in defaults", file=sys.stderr)
 
@@ -134,6 +141,9 @@ def load_config(
     if chairman_override:
         chairman_model = chairman_override
         print(f"[config] CLI override for chairman model applied: {chairman_model}", file=sys.stderr)
+    if skip_ranking_override:
+        skip_ranking_models = skip_ranking_override
+        print(f"[config] CLI override for skip_ranking_models applied: {skip_ranking_models}", file=sys.stderr)
 
     # Validate
     if not api_key:
@@ -154,7 +164,7 @@ def load_config(
         f"council_models={council_models}, "
         f"chairman_model={chairman_model}, "
         f"api_url={api_url}, timeout={timeout}s, max_tokens={max_tokens}, "
-        f"model_timeouts={model_timeouts}",
+        f"model_timeouts={model_timeouts}, skip_ranking_models={skip_ranking_models}",
         file=sys.stderr,
     )
 
@@ -166,4 +176,5 @@ def load_config(
         timeout=timeout,
         max_tokens=max_tokens,
         model_timeouts=model_timeouts,
+        skip_ranking_models=skip_ranking_models,
     )

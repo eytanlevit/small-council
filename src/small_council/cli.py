@@ -137,6 +137,11 @@ def main(
         "-i",
         help="Include files matching glob pattern (can be repeated)",
     ),
+    skip_ranking: Optional[List[str]] = typer.Option(
+        None,
+        "--skip-ranking",
+        help="Model names to exclude from Stage 2 ranking (can be repeated)",
+    ),
     version: bool = typer.Option(
         False,
         "--version",
@@ -190,6 +195,7 @@ def main(
             config_path=config_path,
             models_override=models_list,
             chairman_override=chairman,
+            skip_ranking_override=skip_ranking,
         )
     except ConfigError as e:
         stderr_console.print(f"[red]Configuration error:[/] {e}")
@@ -238,6 +244,7 @@ def main(
             max_tokens=config.max_tokens,
             model_timeouts=config.model_timeouts,
             on_stage_complete=on_stage_complete if use_rich else None,
+            skip_ranking_models=config.skip_ranking_models or None,
         )
 
         return stage1, stage2, stage3, metadata
