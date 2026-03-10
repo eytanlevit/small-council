@@ -131,32 +131,14 @@ This outputs JSON with session info:
 #### Step 4b: Wait for Completion (Long Timeout)
 
 ```bash
-# Wait up to 30 minutes, polling every 30 seconds
-small-council tmux wait "council-SESSIONID" --timeout 1800 --poll-interval 30
-```
-
-**IMPORTANT**: Use a 10-minute timeout (600000ms, the Bash tool maximum) and loop if needed:
-
-```bash
-# First attempt - wait up to 10 minutes
 Bash(
-  command: "small-council tmux wait 'council-SESSIONID' --timeout 600 --poll-interval 30",
+  command: "small-council tmux wait 'council-SESSIONID' --timeout 1800 --poll-interval 30",
   timeout: 600000,
   description: "Waiting for Small Council response"
 )
 ```
 
-If still running after 10 minutes, call again:
-```bash
-# Continue waiting another 10 minutes
-Bash(
-  command: "small-council tmux wait 'council-SESSIONID' --timeout 600 --poll-interval 30",
-  timeout: 600000,
-  description: "Continuing to wait for Small Council response"
-)
-```
-
-Repeat until complete or 30 minutes total elapsed.
+The council typically takes 5-15 minutes. The `--timeout 1800` tells the CLI to poll for up to 30 minutes. The Bash tool timeout (600000ms / 10 min) may fire first — if so, just call the same command again to continue waiting. Repeat until complete.
 
 #### Step 4c: Check Status (Quick, Non-Blocking)
 
