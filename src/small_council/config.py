@@ -10,9 +10,11 @@ import yaml
 from dotenv import load_dotenv
 
 
+_GPT_5_4_PRO = "openai/gpt-5.4-pro"
+
 DEFAULT_COUNCIL_MODELS = [
     "openai/gpt-5.4",
-    "openai/gpt-5.4-pro",
+    _GPT_5_4_PRO,
     "google/gemini-3.1-pro-preview",
     "anthropic/claude-opus-4.6",
 ]
@@ -21,7 +23,7 @@ DEFAULT_CHAIRMAN_MODEL = "anthropic/claude-opus-4.6"
 DEFAULT_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_TIMEOUT = 3600.0
 DEFAULT_MAX_TOKENS = 32768
-DEFAULT_SKIP_RANKING_MODELS = ["openai/gpt-5.4-pro"]
+DEFAULT_SKIP_RANKING_MODELS = [_GPT_5_4_PRO]
 
 
 @dataclass
@@ -111,6 +113,7 @@ def load_config(
             print(f"[config] Config file overrides council models ({len(council_models)} models)", file=sys.stderr)
             if model_timeouts:
                 print(f"[config] Per-model timeouts: {model_timeouts}", file=sys.stderr)
+            skip_ranking_models = []
         if "chairman_model" in config_data:
             chairman_model = config_data["chairman_model"]
             print(f"[config] Config file overrides chairman model: {chairman_model}", file=sys.stderr)
