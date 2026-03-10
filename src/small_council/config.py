@@ -21,6 +21,7 @@ DEFAULT_CHAIRMAN_MODEL = "anthropic/claude-opus-4.6"
 DEFAULT_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_TIMEOUT = 3600.0
 DEFAULT_MAX_TOKENS = 32768
+DEFAULT_SKIP_RANKING_MODELS = ["openai/gpt-5.4-pro"]
 
 
 @dataclass
@@ -33,7 +34,7 @@ class CouncilConfig:
     timeout: float = DEFAULT_TIMEOUT
     max_tokens: int = DEFAULT_MAX_TOKENS
     model_timeouts: Dict[str, float] = field(default_factory=dict)
-    skip_ranking_models: List[str] = field(default_factory=list)
+    skip_ranking_models: List[str] = field(default_factory=lambda: DEFAULT_SKIP_RANKING_MODELS.copy())
 
 
 class ConfigError(Exception):
@@ -83,7 +84,7 @@ def load_config(
     timeout = DEFAULT_TIMEOUT
     max_tokens = DEFAULT_MAX_TOKENS
     model_timeouts: Dict[str, float] = {}
-    skip_ranking_models: List[str] = []
+    skip_ranking_models: List[str] = DEFAULT_SKIP_RANKING_MODELS.copy()
 
     # Load from config file if exists
     if config_path.exists():
