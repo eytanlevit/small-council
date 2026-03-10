@@ -208,7 +208,7 @@ def start(
 
 def wait(
     session_id: str,
-    timeout: int = 1800,
+    timeout: int = 3600,
     poll_interval: int = 10,
 ) -> None:
     """Wait for a Small Council tmux session to complete.

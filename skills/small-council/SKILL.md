@@ -132,13 +132,13 @@ This outputs JSON with session info:
 
 ```bash
 Bash(
-  command: "small-council tmux wait 'council-SESSIONID' --timeout 1800 --poll-interval 30",
+  command: "small-council tmux wait 'council-SESSIONID' --timeout 3600 --poll-interval 30",
   timeout: 600000,
   description: "Waiting for Small Council response"
 )
 ```
 
-The council typically takes 5-15 minutes. The `--timeout 1800` tells the CLI to poll for up to 30 minutes. The Bash tool timeout (600000ms / 10 min) may fire first — if so, just call the same command again to continue waiting. Repeat until complete.
+The council typically takes 5-15 minutes. The `--timeout 3600` tells the CLI to poll for up to 1 hour (matching the LLM timeout). The Bash tool timeout (600000ms / 10 min) may fire first — if so, just call the same command again to continue waiting. Repeat until complete.
 
 #### Step 4c: Check Status (Quick, Non-Blocking)
 
