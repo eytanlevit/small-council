@@ -27,14 +27,23 @@ else
 fi
 
 # 2. small-council CLI
-if command -v small-council &>/dev/null; then
+LOCAL_REPO="$HOME/projects/small-council"
+if [[ -d "$LOCAL_REPO" ]] && command -v uv &>/dev/null; then
+  # Local repo exists — always force-reinstall to pick up latest changes
+  if uv tool install --force --reinstall "$LOCAL_REPO" 2>/dev/null; then
+    ok "small-council CLI installed from local repo (force-reinstalled)"
+  else
+    fail "Could not install small-council CLI from local repo"
+    errors=$((errors + 1))
+  fi
+elif command -v small-council &>/dev/null; then
   ok "small-council CLI installed"
 else
   warn "small-council CLI not found — attempting install..."
 
   installed=false
 
-  # Try uv tool install (PyPI)
+  # Try uv tool install (PyPI / GitHub)
   if command -v uv &>/dev/null; then
     if uv tool install small-council 2>/dev/null; then
       installed=true
